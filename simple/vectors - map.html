@@ -1,0 +1,125 @@
+<meta http-equiv="Access-Control-Allow-Origin" content="*">
+<html >
+  <head>
+    <style  type="text/css">
+        #mapdiv {
+            width: 900px;
+            height: 600px;
+            border: 1px solid black;
+        }
+    </style>
+<script  src="http://localhost:8080/geoserver/www/Openlayers2/OpenLayers.js"  type="text/javascript"></script>
+
+ <script  type="text/javascript">
+var fromProjection = new OpenLayers.Projection("EPSG:4326");   // Transform from WGS 1984
+var toProjection   = new OpenLayers.Projection("EPSG:900913"); // to Spherical Mercator Projection
+OpenLayers.Control.Click = OpenLayers.Class(
+	OpenLayers.Control, {
+		defaultHandlerOptions: {
+		  	'single': true,
+		  	'double': false,
+		  	'pixelTolerance': 0,
+		  	'stopSingle': false,
+		  	'stopDouble': false
+		  },
+		initialize: function(options) {
+		  	this.handlerOptions = OpenLayers.Util.extend(
+		  		{}, this.defaultHandlerOptions
+		  	);
+			  OpenLayers.Control.prototype.initialize.apply(
+		  		this, arguments
+			  );
+		 	 this.handler = new OpenLayers.Handler.Click(
+		  		this, 
+		  		{
+		  			'click': this.trigger
+		  		}, 
+		  		this.handlerOptions
+			);
+		}
+}); 
+var map;
+
+
+
+function tile2long(x,z) {
+  return (x/Math.pow(2,z)*360-180);
+ }
+ 
+ 
+function tile2lat(y,z) {
+  var n=Math.PI-2*Math.PI*y/Math.pow(2,z);
+  return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
+ }
+
+  function justStart(){
+        var geographic = new OpenLayers.Projection("EPSG:4326");
+            var mercator = new OpenLayers.Projection("EPSG:900913");
+            
+            var options = {
+                projection: mercator,
+                displayProjection: geographic,
+                units: "m"
+            };
+            	
+       map = new OpenLayers.Map('mapdiv',options); 
+      OpenLayers.IMAGE_RELOAD_ATTEMPTS = 5;
+                			
+      var osm_layer = new OpenLayers.Layer.OSM( 
+       'OpenStreetMap Layer' 
+     ); 
+
+	 
+     var x = document.getElementById("x").value;
+        var y = document.getElementById("y").value;
+		var z = document.getElementById("z").value;
+		var lat1=tile2lat(y,z);
+        var lat2=tile2lat(Number(y)+1,z);
+        var long1=tile2long(x,z);
+		var long2=tile2long(Number(x)+1,z);
+        
+		var viewparams = '&viewparams=' + 'long1:' + long1 +';' + 'lat1:' + lat1 + ';' + 'long2:' + long2 + ';' + 'lat2:' + lat2;
+		
+
+		
+		var address = 'http://localhost:8080/geoserver/cite/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=cite:customize' + viewparams;
+		
+        var vector_layer = new OpenLayers.Layer.Vector('GML', {
+                styleMap: new OpenLayers.StyleMap(new OpenLayers.Style({
+				pointRadius: 2.0,
+				strokeColor: "#ff1900",
+				fillColor:"#ff1900",
+                				strokeWidth: 3
+            				})),
+				projection: new OpenLayers.Projection('EPSG:900913'),
+                protocol: new OpenLayers.Protocol.HTTP({
+                url: address,
+                format: new OpenLayers.Format.GML({
+                        extractAttributes:true
+                    })
+                }),
+                strategies: [new OpenLayers.Strategy.Fixed()]
+            });
+		
+
+		map.addLayers([osm_layer]);
+        map.addLayer(vector_layer);
+            	 var click = new OpenLayers.Control.Click();
+                	map.addControl(click);
+                	click.activate();
+            map.setCenter(new OpenLayers.LonLat(12955490, 4854208)); 
+      			map.zoomTo(12);  
+        }
+    </script>
+    
+</head>
+  <body>
+      <input id="x" type = "text" value="13490">   </input>
+      <input id="y" type = "text" value="6209">   </input>
+	  <input id="z" type = "text" value="14">  </input>
+      <input type = "button" value = "submit" onclick = "justStart()"></input>
+      <div id="mapdiv" ></div>
+  </body>
+</html>
+
+   
